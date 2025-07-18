@@ -26,6 +26,7 @@
               black
 
               python313
+              python313Packages.flask
               python313Packages.python-dotenv
               python313Packages.slack-sdk
             ];
