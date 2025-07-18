@@ -30,6 +30,14 @@
               python313Packages.python-dotenv
               python313Packages.slack-sdk
             ];
+            shellHook = ''
+              if [ ! -d .venv ]; then
+                echo "Creating Python venv…"
+                python -m venv .venv
+              fi
+              # activate it every time
+              source .venv/bin/activate
+            '';
           };
       }
     );
