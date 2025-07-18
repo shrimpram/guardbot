@@ -10,7 +10,6 @@ load_dotenv(dotenv_path=env_path)
 
 app = Flask(__name__)
 
-# attach the adapter to the same app
 slack_events_adapter = SlackEventAdapter(
     signing_secret=os.environ["SIGNING_SECRET"], endpoint="/slack/events", server=app
 )
@@ -22,23 +21,6 @@ BOT_ID = client.api_call("auth.test")["user_id"]
 @slack_events_adapter.on("message")
 def message(payload):
     print(payload)
-    event = payload["event"]
-
-    # Slack sends messages from bots too—ignore those
-    if event.get("subtype") is not None:
-        return
-
-    if event.get("user") == BOT_ID:
-        return
-
-    # Check if this is a private channel (channel_type "group")
-    # channel_id = event["channel"]
-    # Respond to the same channel
-    # client.chat_postMessage(
-    #     channel=channel_id,
-    #     text="Hello World",
-    #     # thread_ts=event.get("ts"),  # optional: reply in thread
-    # )
 
 
 @app.route("/commands/points", methods=["POST"])
@@ -47,8 +29,6 @@ def points():
     channel_id = str(payload.get("channel_id"))
     user_id = str(payload.get("user_id"))
     text = str(payload.get("text"))
-
-    print(payload)
 
     if is_staff(user_id) == False:
         client.chat_postEphemeral(
