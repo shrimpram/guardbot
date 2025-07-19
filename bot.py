@@ -85,6 +85,7 @@ def points():
         """
     )
     cn.connection.commit()
+    cn.close()
 
     return Response(), 200
 
