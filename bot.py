@@ -1,12 +1,19 @@
+import datetime
 import os
-from flask import Flask, request, Response
-from slackeventsapi import SlackEventAdapter
-from slack_sdk import WebClient
-from dotenv import load_dotenv
+import re
+import sqlite3
 from pathlib import Path
+
+import pandas as pd
+from dotenv import load_dotenv
+from flask import Flask, Response, request
+from slack_sdk import WebClient
+from slackeventsapi import SlackEventAdapter
 
 env_path = Path(".") / ".env"
 load_dotenv(dotenv_path=env_path)
+
+connection = sqlite3.connect(os.environ["DB_PATH"], check_same_thread=False)
 
 app = Flask(__name__)
 
@@ -54,10 +61,27 @@ def points():
         wrong_format(channel_id, user_id)
         return Response(), 200
 
-    client.chat_postMessage(
+    mention_pattern = r"<@([^|>]+)\|[^>]+>"
+    mention_regex = re.match(mention_pattern, mention)
+
+    if not mention_regex:
+        wrong_format(channel_id, user_id)
+        return Response(), 200
+
+    student_id = mention_regex.group(1)
+
+    client.chat_postEphemeral(
         channel=channel_id,
-        text=f"You are about to add {value} points from {mention} for {justification}?",
+        user=user_id,
+        text=f"You added {value} points to {mention} for {justification}.",
     )
+
+    today = datetime.date.today().isoformat()
+    cn = connection.cursor()
+    cn.execute(
+        f"""INSERT INTO points (student_id, award_date, amount, coach_id, reason) VALUES ("{student_id}", "{today}", "{value}", "{user_id}", "{justification}")"""
+    )
+    cn.connection.commit()
 
     return Response(), 200
 
