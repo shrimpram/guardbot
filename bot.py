@@ -79,7 +79,10 @@ def points():
     today = datetime.date.today().isoformat()
     cn = connection.cursor()
     cn.execute(
-        f"""INSERT INTO points (student_id, award_date, amount, coach_id, reason) VALUES ("{student_id}", "{today}", "{value}", "{user_id}", "{justification}")"""
+        f"""
+        INSERT INTO points (student_id, award_date, amount, coach_id, reason)
+        VALUES ("{student_id}", "{today}", "{value}", "{user_id}", "{justification}")
+        """
     )
     cn.connection.commit()
 
