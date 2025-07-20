@@ -104,5 +104,43 @@ def wrong_format(channel_id, user_id):
     )
 
 
+@app.route("/commands/leaderboard", methods=["POST"])
+def leaderboard():
+    payload = request.form
+    channel_id = str(payload.get("channel_id"))
+    user_id = str(payload.get("user_id"))
+    text = str(payload.get("text"))
+
+    cn = connection.cursor()
+    cn.execute(
+        """
+        SELECT
+            students.mention,
+            SUM(points.amount) AS total_points
+        FROM points
+        INNER JOIN students
+            ON points.student_id = students.student_id
+        GROUP BY students.student_name
+        ORDER BY total_points DESC
+        LIMIT 5;
+        """
+    )
+
+    results = cn.fetchall()
+    cn.close()
+
+    leaderboard_arr = []
+    for i, (mention, total_points) in enumerate(results, 1):
+        leaderboard_arr.append(f"{i}. {mention}: {total_points} points")
+
+    leaderboard = "\n".join(leaderboard_arr)
+
+    client.chat_postMessage(
+        channel=channel_id,
+        text="*Vanguard Points Leaderboard*" + "\n" + leaderboard,
+    )
+    return Response(), 200
+
+
 if __name__ == "__main__":
     app.run(port=3000)
