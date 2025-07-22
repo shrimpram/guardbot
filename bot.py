@@ -108,14 +108,12 @@ def wrong_format(channel_id, user_id):
 def leaderboard():
     payload = request.form
     channel_id = str(payload.get("channel_id"))
-    user_id = str(payload.get("user_id"))
-    text = str(payload.get("text"))
 
     cn = connection.cursor()
     cn.execute(
         """
         SELECT
-            students.mention,
+            students.student_id,
             SUM(points.amount) AS total_points
         FROM points
         INNER JOIN students
@@ -131,7 +129,7 @@ def leaderboard():
 
     leaderboard_arr = []
     for i, (mention, total_points) in enumerate(results, 1):
-        leaderboard_arr.append(f"{i}. {mention}: {total_points} points")
+        leaderboard_arr.append(f"{i}. <@{mention}>: {total_points} points")
 
     leaderboard = "\n".join(leaderboard_arr)
 
