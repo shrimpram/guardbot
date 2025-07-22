@@ -50,7 +50,7 @@ def init_students():
         cn.execute(
             """
                 INSERT OR IGNORE INTO students
-                  (student_id, student_name)
+                  (student_id, name)
                 VALUES (?, ?)
             """,
             (user_id, name),
