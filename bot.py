@@ -4,7 +4,6 @@ import re
 import sqlite3
 from pathlib import Path
 
-import pandas as pd
 from dotenv import load_dotenv
 from flask import Flask, Response, request
 from slack_sdk import WebClient
