@@ -131,7 +131,7 @@ def leaderboard():
     FROM points AS p
     INNER JOIN students AS s
         ON p.student_id = s.student_id
-    GROUP BY s.student_name
+    GROUP BY s.name
     ORDER BY total_points DESC
     LIMIT 5
         """
