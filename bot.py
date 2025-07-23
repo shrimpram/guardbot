@@ -153,5 +153,147 @@ def leaderboard():
     return Response(), 200
 
 
+@app.route("/commands/student", methods=["POST"])
+def student():
+    payload = request.form
+    channel_id = str(payload.get("channel_id"))
+    user_id = str(payload.get("user_id"))
+    text = str(payload.get("text"))
+
+    parts = text.split(maxsplit=2)
+
+    mention = parts[0]
+
+    student_id = id_from_mention(mention)
+
+    if not student_id:
+        client.chat_postEphemeral(
+            channel=channel_id, user=user_id, text=("Please mention a student.")
+        )
+        return Response(), 200
+
+    valid_columns = [
+        "student_id",
+        "name",
+        "school",
+        "grade",
+        "season_goal",
+        "argument_specialty",
+    ]
+
+    modifiable_columns = [
+        "name",
+        "school",
+        "grade",
+        "season_goal",
+        "argument_specialty",
+    ]
+
+    if len(parts) == 1:
+        cn = connection.cursor()
+        cn.execute(
+            "SELECT * FROM students WHERE student_id = ?",
+            (student_id,),
+        )
+        row = cn.fetchone()
+        cn.close()
+
+        if not row:
+            client.chat_postEphemeral(
+                channel=channel_id,
+                user=user_id,
+                text="No record found for that student.",
+            )
+        else:
+            student_id, name, school, grade, goal, specialty = row
+            client.chat_postEphemeral(
+                channel=channel_id,
+                user=user_id,
+                text=(
+                    f"*Student ID:* {student_id}\n"
+                    + f"*Name:* {name}\n"
+                    + f"*School:* {school or '_none_'}\n"
+                    + f"*Grade:* {grade if grade is not None else '_none_'}\n"
+                    + f"*Season Goal:* {goal or '_none_'}\n"
+                    + f"*Argument Specialty:* {specialty or '_none_'}"
+                ),
+            )
+        return Response(), 200
+
+    column = parts[1]
+    if column not in valid_columns:
+        client.chat_postEphemeral(
+            channel=channel_id,
+            user=user_id,
+            text=f"Please select one of the following columns to list: {valid_columns}",
+        )
+        return Response(), 200
+
+    if len(parts) == 2:
+        column = parts[1]
+
+        cn = connection.cursor()
+        cn.execute(
+            f"SELECT name, {column} FROM students WHERE student_id = ?",
+            (student_id,),
+        )
+        row = cn.fetchone()
+        cn.close()
+
+        if not row:
+            client.chat_postEphemeral(
+                channel=channel_id,
+                user=user_id,
+                text="No record found for that student.",
+            )
+        else:
+            client.chat_postEphemeral(
+                channel=channel_id,
+                user=user_id,
+                text=(
+                    f"{row[0]}, {column}: {row[1] if row[1] is not None else '_none_'}"
+                ),
+            )
+        return Response(), 200
+
+    if column not in modifiable_columns:
+        client.chat_postEphemeral(
+            channel=channel_id,
+            user=user_id,
+            text=f"This column is not modifiable!",
+        )
+        return Response(), 200
+
+    if len(parts) == 3:
+        if not is_staff(user_id) and student_id != user_id:
+            client.chat_postEphemeral(
+                channel=channel_id,
+                user=user_id,
+                text="You can only modify your own information.",
+            )
+            return Response(), 200
+
+        value = parts[2]
+
+        cn = connection.cursor()
+        cn.execute(
+            f"UPDATE students SET {column} = ? WHERE student_id = ?",
+            (value, student_id),
+        )
+        connection.commit()
+        cn.close()
+
+        client.chat_postEphemeral(
+            channel=channel_id,
+            user=user_id,
+            text=f"Updated *{column}* for {mention} to `{value}`.",
+        )
+
+        return Response(), 200
+
+    wrong_format(channel_id, user_id)
+    return Response(), 200
+
+
 if __name__ == "__main__":
     app.run(port=3000)
