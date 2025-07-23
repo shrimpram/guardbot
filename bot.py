@@ -27,6 +27,28 @@ BOT_ID = client.api_call("auth.test")["user_id"]
 @slack_events_adapter.on("message")
 def message(payload):
     print(payload)
+def is_staff(user_id: str) -> bool:
+    staff_group_id = "S08SRKF1LSY"
+    staff_group_users = client.usergroups_users_list(usergroup=staff_group_id)["users"]
+    return user_id in str(staff_group_users)
+
+
+def wrong_format(channel_id, user_id):
+    client.chat_postEphemeral(
+        channel=channel_id,
+        user=user_id,
+        text="Please enter the command in the correct format!",
+    )
+
+
+def id_from_mention(mention):
+    mention_pattern = r"<@([^|>]+)\|[^>]+>"
+    mention_regex = re.match(mention_pattern, mention)
+
+    if not mention_regex:
+        return
+
+    return mention_regex.group(1)
 
 
 @app.route("/commands/points", methods=["POST"])
@@ -93,20 +115,6 @@ def points():
     cn.close()
 
     return Response(), 200
-
-
-def is_staff(user_id: str) -> bool:
-    staff_group_id = "S08SRKF1LSY"
-    staff_group_users = client.usergroups_users_list(usergroup=staff_group_id)["users"]
-    return user_id in str(staff_group_users)
-
-
-def wrong_format(channel_id, user_id):
-    client.chat_postEphemeral(
-        channel=channel_id,
-        user=user_id,
-        text="Please enter the command in the correct format!",
-    )
 
 
 @app.route("/commands/leaderboard", methods=["POST"])
