@@ -22,21 +22,26 @@
         devShell =
           with pkgs;
           mkShell {
-            buildInputs = [
+            packages = [
               black
-
               python313
-              python313Packages.flask
-              python313Packages.python-dotenv
-              python313Packages.slack-sdk
             ];
+
+            buildInputs = [
+              readline
+              libffi
+              openssl
+              git
+              openssh
+              rsync
+            ];
+
             shellHook = ''
               if [ ! -d .venv ]; then
-                echo "Creating Python venv…"
                 python -m venv .venv
               fi
-              # activate it every time
               source .venv/bin/activate
+              pip install -r requirements.txt
             '';
           };
       }
