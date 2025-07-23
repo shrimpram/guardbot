@@ -78,10 +78,16 @@ def points():
     today = datetime.date.today().isoformat()
     cn = connection.cursor()
     cn.execute(
-        f"""
-        INSERT INTO points (student_id, award_date, amount, coach_id, reason)
-        VALUES ("{student_id}", "{today}", "{value}", "{user_id}", "{justification}")
         """
+    INSERT INTO points (
+        student_id,
+        award_date,
+        amount,
+        coach_id,
+        reason
+    ) VALUES (?, ?, ?, ?, ?)
+        """,
+        (student_id, today, value, user_id, justification),
     )
     cn.connection.commit()
     cn.close()
@@ -111,15 +117,15 @@ def leaderboard():
     cn = connection.cursor()
     cn.execute(
         """
-        SELECT
-            students.student_id,
-            SUM(points.amount) AS total_points
-        FROM points
-        INNER JOIN students
-            ON points.student_id = students.student_id
-        GROUP BY students.student_name
-        ORDER BY total_points DESC
-        LIMIT 5;
+    SELECT
+        s.student_id,
+        SUM(p.amount) AS total_points
+    FROM points AS p
+    INNER JOIN students AS s
+        ON p.student_id = s.student_id
+    GROUP BY s.student_name
+    ORDER BY total_points DESC
+    LIMIT 5
         """
     )
 
