@@ -1,6 +1,4 @@
 datetime
-re
-sqlite3
 pathlib
 dotenv
 flask
