@@ -5,15 +5,21 @@ from flask import Flask
 from slack_sdk import WebClient
 from slackeventsapi import SlackEventAdapter
 
+from . import commands
+
 load_dotenv()
 
-app = Flask(__name__)
+
+class GuardBot(Flask):
+    client: WebClient
+    slack_events_adapter: SlackEventAdapter
+
+
+app = GuardBot(__name__)
 
 app.client = WebClient(token=os.environ["SLACK_TOKEN"])
 SlackEventAdapter(
-    signing_secret=os.environ["SIGNING_SECRET"],
-    endpoint="/slack/events",
-    server=app
+    signing_secret=os.environ["SIGNING_SECRET"], endpoint="/slack/events", server=app
 )
 
-from . import commands
+commands.get_db()
