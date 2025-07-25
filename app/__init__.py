@@ -5,8 +5,6 @@ from flask import Flask
 from slack_sdk import WebClient
 from slackeventsapi import SlackEventAdapter
 
-from . import commands
-
 load_dotenv()
 
 
@@ -21,5 +19,3 @@ app.client = WebClient(token=os.environ["SLACK_TOKEN"])
 SlackEventAdapter(
     signing_secret=os.environ["SIGNING_SECRET"], endpoint="/slack/events", server=app
 )
-
-commands.get_db()
