@@ -1,17 +1,22 @@
+import datetime
 import os
+import re
 import sqlite3
 
 from flask import Response
 from flask import current_app as app
 from flask import request
 
+from . import app
+
+client = app.client
+
 
 def get_db():
-    # simple sqlite getter – you can refactor into its own module
     db_path = os.environ["DB_PATH"]
-    conn = sqlite3.connect(db_path, check_same_thread=False)
-    conn.row_factory = sqlite3.Row
-    return conn
+    connection = sqlite3.connect(db_path, check_same_thread=False)
+    return connection
+
 
 def is_staff(user_id: str) -> bool:
     staff_group_id = "S08SRKF1LSY"
@@ -84,6 +89,7 @@ def points():
     )
 
     today = datetime.date.today().isoformat()
+    connection = get_db()
     cn = connection.cursor()
     cn.execute(
         """
@@ -108,6 +114,7 @@ def leaderboard():
     payload = request.form
     channel_id = str(payload.get("channel_id"))
 
+    connection = get_db()
     cn = connection.cursor()
     cn.execute(
         """
@@ -176,6 +183,7 @@ def student():
     ]
 
     if len(parts) == 1:
+        connection = get_db()
         cn = connection.cursor()
         cn.execute(
             "SELECT * FROM students WHERE student_id = ?",
@@ -218,6 +226,7 @@ def student():
     if len(parts) == 2:
         column = parts[1]
 
+        connection = get_db()
         cn = connection.cursor()
         cn.execute(
             f"SELECT name, {column} FROM students WHERE student_id = ?",
@@ -261,6 +270,7 @@ def student():
 
         value = parts[2]
 
+        connection = get_db()
         cn = connection.cursor()
         cn.execute(
             f"UPDATE students SET {column} = ? WHERE student_id = ?",
