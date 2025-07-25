@@ -1,32 +1,18 @@
-import datetime
 import os
-import re
 import sqlite3
-from pathlib import Path
 
-from dotenv import load_dotenv
-from flask import Flask, Response, request
-from slack_sdk import WebClient
-from slackeventsapi import SlackEventAdapter
-
-env_path = Path(".") / ".env"
-load_dotenv(dotenv_path=env_path)
-
-connection = sqlite3.connect(os.environ["DB_PATH"], check_same_thread=False)
-
-app = Flask(__name__)
-
-slack_events_adapter = SlackEventAdapter(
-    signing_secret=os.environ["SIGNING_SECRET"], endpoint="/slack/events", server=app
-)
-
-client = WebClient(token=os.environ["SLACK_TOKEN"])
-BOT_ID = client.api_call("auth.test")["user_id"]
+from flask import Response
+from flask import current_app as app
+from flask import request
 
 
-@slack_events_adapter.on("message")
-def message(payload):
-    print(payload)
+def get_db():
+    # simple sqlite getter – you can refactor into its own module
+    db_path = os.environ["DB_PATH"]
+    conn = sqlite3.connect(db_path, check_same_thread=False)
+    conn.row_factory = sqlite3.Row
+    return conn
+
 def is_staff(user_id: str) -> bool:
     staff_group_id = "S08SRKF1LSY"
     staff_group_users = client.usergroups_users_list(usergroup=staff_group_id)["users"]
@@ -293,7 +279,3 @@ def student():
 
     wrong_format(channel_id, user_id)
     return Response(), 200
-
-
-if __name__ == "__main__":
-    app.run(port=3000)
