@@ -1,0 +1,31 @@
+[build-system]
+requires = [
+    "setuptools>=61.0",
+    "wheel",
+    "setuptools-scm[toml]>=6.0"
+]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "guardbot"
+dynamic = ["version"]
+description = "Slack bot for Vanguard Debate"
+readme = "README.md"
+requires-python = ">=3.8"
+license = { text = "MIT" }
+authors = [
+    { name = "Shreeram Modi", email = "smodi@smodi.net" }
+]
+urls = { "Homepage" = "https://github.com/shrimpram/guardbot" }
+
+dependencies=[
+    "Flask>=2.0.0",
+    "slack-sdk>=3.0.0",
+    "slackeventsapi>=2.0.0",
+    "python-dotenv>=0.20.0",
+    "datetime>=5.5",
+]
+
+[tool.setuptools_scm]
+version_scheme = "post-release"
+local_scheme = "no-local-version"
