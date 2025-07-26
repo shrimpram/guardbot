@@ -3,3 +3,4 @@ guardbot.egg-info/
 .venv/
 __pycache__/
 .env
+.claude/
