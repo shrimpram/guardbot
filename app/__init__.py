@@ -19,3 +19,5 @@ app.client = WebClient(token=os.environ["SLACK_TOKEN"])
 SlackEventAdapter(
     signing_secret=os.environ["SIGNING_SECRET"], endpoint="/slack/events", server=app
 )
+
+from . import commands
