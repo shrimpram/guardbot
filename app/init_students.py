@@ -45,11 +45,16 @@ def init_students():
 
         name = profile.get("real_name") or profile.get("display_name") or info["name"]
 
-        print(f"{name}: {user_id}")
+        cn.execute("SELECT student_id FROM students WHERE student_id = ?", (user_id,))
+        if cn.fetchone():
+            print(f"Student {user_id} ({name}) already exists, skipping")
+            continue
+
+        print(f"Adding student {user_id} ({name})")
 
         cn.execute(
             """
-                INSERT OR IGNORE INTO students
+                INSERT INTO students
                   (student_id, name)
                 VALUES (?, ?)
             """,
