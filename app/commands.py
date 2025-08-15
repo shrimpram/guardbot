@@ -5,7 +5,7 @@ import sqlite3
 
 from flask import Response
 from flask import current_app as app
-from flask import request
+from flask import jsonify, request
 
 from . import app
 
@@ -289,3 +289,185 @@ def student():
 
     wrong_format(channel_id, user_id)
     return Response(), 200
+
+
+def parse_slack_message_url(url):
+    try:
+        # Slack often wraps URLs in <>
+        clean_url = url.strip("<>")
+
+        parts = clean_url.split("/")
+
+        archives_index = parts.index("archives")
+
+        # Channel ID should be right after 'archives'
+        if len(parts) <= archives_index + 1:
+            return None, None
+
+        channel_id = parts[archives_index + 1]
+
+        # Timestamp should be right after channel ID and start with 'p'
+        if len(parts) <= archives_index + 2:
+            return None, None
+
+        timestamp_part = parts[archives_index + 2]
+
+        if not timestamp_part.startswith("p"):
+            return None, None
+
+        timestamp_raw = timestamp_part[1:]
+
+        # Convert timestamp format: 1755226511875879 -> 1755226511.875879
+        if len(timestamp_raw) >= 10:
+            seconds = timestamp_raw[:10]
+            microseconds = timestamp_raw[10:] if len(timestamp_raw) > 10 else "000000"
+            timestamp = f"{seconds}.{microseconds}"
+        else:
+            timestamp = timestamp_raw
+
+        return channel_id, timestamp
+
+    except (ValueError, IndexError):
+        return None, None
+
+
+def get_message_reactions(channel_id, timestamp):
+    response = client.reactions_get(channel=channel_id, timestamp=timestamp)
+    return response
+
+
+def parse_emoji_name(emoji_input):
+    # If it's in :name: format, extract the name
+    if emoji_input.startswith(":") and emoji_input.endswith(":"):
+        return emoji_input[1:-1]  # Remove the colons
+
+    # Otherwise return as-is (in case user inputs just the name)
+    return emoji_input
+
+
+def add_users_to_channel(channel_id, user_ids):
+    response = client.conversations_invite(channel=channel_id, users=user_ids)
+    return response
+
+
+def channel_from_mention(channel_text):
+    match = re.match(r"<#([A-Z0-9]+)\|.*>", channel_text)
+    if match:
+        return match.group(1)
+
+    return channel_text
+
+
+@app.route("/commands/add-reactors", methods=["POST"])
+def add_reactors():
+    """
+    Slack slash command handler
+    Expected format: /add-reactors <message_url> <emoji> <target_channel>
+    """
+    try:
+        # Parse the command text
+        command_text = request.form.get("text", "").strip()
+
+        if not command_text:
+            return jsonify(
+                {
+                    "response_type": "ephemeral",
+                    "text": "Usage: /add-reactors <message_url> <emoji> <target_channel>\nExample: /add-reactors https://workspace.slack.com/archives/C123/p123456 👍 #general",
+                }
+            )
+
+        # Split the command into parts
+        parts = command_text.split()
+
+        if len(parts) != 3:
+            return jsonify(
+                {
+                    "response_type": "ephemeral",
+                    "text": "Invalid format. Usage: /add-reactors <message_url> <emoji> <target_channel>",
+                }
+            )
+
+        message_url, emoji, target_channel = parts
+
+        # Parse message URL
+        source_channel_id, timestamp = parse_slack_message_url(message_url)
+
+        if not source_channel_id or not timestamp:
+            return jsonify(
+                {
+                    "response_type": "ephemeral",
+                    "text": "Invalid message URL. Please provide a valid Slack message link.",
+                }
+            )
+
+        # Parse target channel
+        target_channel_id = channel_from_mention(target_channel)
+
+        if not target_channel_id:
+            return jsonify(
+                {
+                    "response_type": "ephemeral",
+                    "text": f"Could not find channel: {target_channel}",
+                }
+            )
+
+        # Get message reactions
+        reactions_data = get_message_reactions(source_channel_id, timestamp)
+
+        if not reactions_data.get("ok"):
+            error_msg = reactions_data.get("error", "Unknown error")
+            return jsonify(
+                {
+                    "response_type": "ephemeral",
+                    "text": f"Error getting message reactions: {error_msg}",
+                }
+            )
+
+        # Find users who reacted with the specified emoji
+        emoji_name = parse_emoji_name(emoji)
+        target_users = []
+
+        message = reactions_data.get("message", {})
+        reactions = message.get("reactions", [])
+
+        for reaction in reactions:
+            if reaction.get("name") == emoji_name:
+                target_users.extend(reaction.get("users", []))
+                break
+
+        if not target_users:
+            return jsonify(
+                {
+                    "response_type": "ephemeral",
+                    "text": f"No users found who reacted with {emoji} to that message.",
+                }
+            )
+
+        # Add users to target channel
+        invite_result = add_users_to_channel(target_channel_id, target_users)
+
+        if invite_result.get("ok"):
+            user_count = len(target_users)
+            return jsonify(
+                {
+                    "response_type": "in_channel",
+                    "text": f"Successfully added {user_count} user{'s' if user_count != 1 else ''} who reacted with {emoji} to {target_channel}!",
+                }
+            )
+        else:
+            error_msg = invite_result.get("error", "Unknown error")
+            return jsonify(
+                {
+                    "response_type": "ephemeral",
+                    "text": f"Error adding users to channel: {error_msg}",
+                }
+            )
+
+    except Exception as e:
+        print(f"Error in add_reactors: {e}")
+        return jsonify(
+            {
+                "response_type": "ephemeral",
+                "text": "An unexpected error occurred. Please try again.",
+            }
+        )
